@@ -1,0 +1,7 @@
+package: env
+import:
+- package: github.com/neliseev/env
+testImport:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
