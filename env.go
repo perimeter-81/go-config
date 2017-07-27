@@ -10,8 +10,7 @@ import (
 )
 
 var (
-	// ErrNotAStructPtr is returned if you pass something that is not a pointer to a
-	// Struct to Parse
+	// ErrNotAStructPtr is returned if you pass something that is not a pointer to a Struct to Parse
 	ErrNotAStructPtr = errors.New("Expected a pointer to a Struct")
 	// ErrUnsupportedType if the struct field type is not supported by env
 	ErrUnsupportedType = errors.New("Type is not supported")
