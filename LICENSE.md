@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2017 Nikita Eliseev
+Copyright (c) 2017-2018 Nikita Eliseev
 
 Copyright (c) 2015-2016 Carlos Alexandro Becker
 

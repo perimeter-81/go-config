@@ -1,7 +1,8 @@
-package env
+package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -9,13 +10,22 @@ import (
 	"time"
 )
 
+const (
+	fieldTag        = "env"
+	fieldDefaultTag = "envDefault"
+	separator       = ","
+)
+
 var (
 	// ErrNotAStructPtr is returned if you pass something that is not a pointer to a Struct to Parse
-	ErrNotAStructPtr = errors.New("Expected a pointer to a Struct")
+	ErrNotAStructPtr = errors.New("expected a pointer to a Struct")
+
 	// ErrUnsupportedType if the struct field type is not supported by env
-	ErrUnsupportedType = errors.New("Type is not supported")
+	ErrUnsupportedType = errors.New("type is not supported")
+
 	// ErrUnsupportedSliceType if the slice element type is not supported by env
-	ErrUnsupportedSliceType = errors.New("Unsupported slice type")
+	ErrUnsupportedSliceType = errors.New("unsupported slice type")
+
 	// Friendly names for reflect types
 	sliceOfInts     = reflect.TypeOf([]int(nil))
 	sliceOfInt64s   = reflect.TypeOf([]int64(nil))
@@ -25,17 +35,19 @@ var (
 	sliceOfFloat64s = reflect.TypeOf([]float64(nil))
 )
 
-// Parse parses a struct containing `env` tags and loads its values from
+// parse parses a struct containing `env` tags and loads its values from
 // environment variables.
-func Parse(v interface{}) error {
+func parseENV(v interface{}) error {
 	ptrRef := reflect.ValueOf(v)
 	if ptrRef.Kind() != reflect.Ptr {
 		return ErrNotAStructPtr
 	}
+
 	ref := ptrRef.Elem()
 	if ref.Kind() != reflect.Struct {
 		return ErrNotAStructPtr
 	}
+
 	return doParse(ref)
 }
 
@@ -46,25 +58,23 @@ func doParse(ref reflect.Value) error {
 		if err != nil {
 			return err
 		}
+
 		if value == "" {
 			continue
 		}
-		if err := set(ref.Field(i), refType.Field(i), value); err != nil {
+
+		if err = set(ref.Field(i), refType.Field(i), value); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-func get(field reflect.StructField) (string, error) {
-	var (
-		val string
-		err error
-	)
+func get(field reflect.StructField) (val string, err error) {
+	key, opts := parseKeyForOption(field.Tag.Get(fieldTag))
 
-	key, opts := parseKeyForOption(field.Tag.Get("env"))
-
-	defaultValue := field.Tag.Get("envDefault")
+	defaultValue := field.Tag.Get(fieldDefaultTag)
 	val = getOr(key, defaultValue)
 
 	if len(opts) > 0 {
@@ -76,7 +86,7 @@ func get(field reflect.StructField) (string, error) {
 			case "required":
 				val, err = getRequired(key)
 			default:
-				err = errors.New("Env tag option " + opt + " not supported.")
+				err = fmt.Errorf("env tag option %s not supported", opt)
 			}
 		}
 	}
@@ -86,7 +96,8 @@ func get(field reflect.StructField) (string, error) {
 
 // split the env tag's key into the expected key and desired option, if any.
 func parseKeyForOption(key string) (string, []string) {
-	opts := strings.Split(key, ",")
+	opts := strings.Split(key, separator)
+
 	return opts[0], opts[1:]
 }
 
@@ -94,8 +105,8 @@ func getRequired(key string) (string, error) {
 	if value := os.Getenv(key); value != "" {
 		return value, nil
 	}
-	// We do not use fmt.Errorf to avoid another import.
-	return "", errors.New("Required environment variable " + key + " is not set")
+
+	return "", fmt.Errorf("required environment variable %s is not set", key)
 }
 
 func getOr(key, defaultValue string) string {
@@ -103,39 +114,45 @@ func getOr(key, defaultValue string) string {
 	if value != "" {
 		return value
 	}
+
 	return defaultValue
 }
 
 func set(field reflect.Value, refType reflect.StructField, value string) error {
 	switch field.Kind() {
 	case reflect.Slice:
-		separator := refType.Tag.Get("envSeparator")
-		return handleSlice(field, value, separator)
+		sep := refType.Tag.Get("envSeparator")
+
+		return handleSlice(field, value, sep)
 	case reflect.String:
 		field.SetString(value)
 	case reflect.Bool:
-		bvalue, err := strconv.ParseBool(value)
+		bVal, err := strconv.ParseBool(value)
 		if err != nil {
 			return err
 		}
-		field.SetBool(bvalue)
+
+		field.SetBool(bVal)
 	case reflect.Int:
 		intValue, err := strconv.ParseInt(value, 10, 32)
 		if err != nil {
 			return err
 		}
+
 		field.SetInt(intValue)
 	case reflect.Float32:
 		v, err := strconv.ParseFloat(value, 32)
 		if err != nil {
 			return err
 		}
+
 		field.SetFloat(v)
 	case reflect.Float64:
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
 			return err
 		}
+
 		field.Set(reflect.ValueOf(v))
 	case reflect.Int64:
 		if refType.Type.String() == "time.Duration" {
@@ -143,26 +160,29 @@ func set(field reflect.Value, refType reflect.StructField, value string) error {
 			if err != nil {
 				return err
 			}
+
 			field.Set(reflect.ValueOf(dValue))
 		} else {
 			intValue, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				return err
 			}
+
 			field.SetInt(intValue)
 		}
 	default:
 		return ErrUnsupportedType
 	}
+
 	return nil
 }
 
-func handleSlice(field reflect.Value, value, separator string) error {
-	if separator == "" {
-		separator = ","
+func handleSlice(field reflect.Value, value, sep string) error {
+	if sep == "" {
+		sep = separator
 	}
 
-	splitData := strings.Split(value, separator)
+	splitData := strings.Split(value, sep)
 
 	switch field.Type() {
 	case sliceOfStrings:
@@ -172,12 +192,14 @@ func handleSlice(field reflect.Value, value, separator string) error {
 		if err != nil {
 			return err
 		}
+
 		field.Set(reflect.ValueOf(intData))
 	case sliceOfInt64s:
 		int64Data, err := parseInt64s(splitData)
 		if err != nil {
 			return err
 		}
+
 		field.Set(reflect.ValueOf(int64Data))
 
 	case sliceOfFloat32s:
@@ -185,22 +207,26 @@ func handleSlice(field reflect.Value, value, separator string) error {
 		if err != nil {
 			return err
 		}
+
 		field.Set(reflect.ValueOf(data))
 	case sliceOfFloat64s:
 		data, err := parseFloat64s(splitData)
 		if err != nil {
 			return err
 		}
+
 		field.Set(reflect.ValueOf(data))
 	case sliceOfBools:
 		boolData, err := parseBools(splitData)
 		if err != nil {
 			return err
 		}
+
 		field.Set(reflect.ValueOf(boolData))
 	default:
 		return ErrUnsupportedSliceType
 	}
+
 	return nil
 }
 
@@ -212,11 +238,12 @@ func parseInts(data []string) ([]int, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		intSlice = append(intSlice, int(intValue))
 	}
+
 	return intSlice, nil
 }
-
 
 func parseInt64s(data []string) ([]int64, error) {
 	var intSlice []int64
@@ -226,23 +253,25 @@ func parseInt64s(data []string) ([]int64, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		intSlice = append(intSlice, int64(intValue))
 	}
+
 	return intSlice, nil
 }
-
-
 
 func parseFloat32s(data []string) ([]float32, error) {
 	var float32Slice []float32
 
 	for _, v := range data {
-		data, err := strconv.ParseFloat(v, 32)
+		obj, err := strconv.ParseFloat(v, 32)
 		if err != nil {
 			return nil, err
 		}
-		float32Slice = append(float32Slice, float32(data))
+
+		float32Slice = append(float32Slice, float32(obj))
 	}
+
 	return float32Slice, nil
 }
 
@@ -250,12 +279,14 @@ func parseFloat64s(data []string) ([]float64, error) {
 	var float64Slice []float64
 
 	for _, v := range data {
-		data, err := strconv.ParseFloat(v, 64)
+		obj, err := strconv.ParseFloat(v, 64)
 		if err != nil {
 			return nil, err
 		}
-		float64Slice = append(float64Slice, float64(data))
+
+		float64Slice = append(float64Slice, float64(obj))
 	}
+
 	return float64Slice, nil
 }
 
@@ -263,12 +294,13 @@ func parseBools(data []string) ([]bool, error) {
 	var boolSlice []bool
 
 	for _, v := range data {
-		bvalue, err := strconv.ParseBool(v)
+		bVal, err := strconv.ParseBool(v)
 		if err != nil {
 			return nil, err
 		}
 
-		boolSlice = append(boolSlice, bvalue)
+		boolSlice = append(boolSlice, bVal)
 	}
+
 	return boolSlice, nil
 }
