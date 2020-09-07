@@ -12,7 +12,7 @@ import (
 
 const (
 	fieldTag        = "env"
-	fieldDefaultTag = "envDefault"
+	fieldDefaultTag = "default"
 	separator       = ","
 )
 

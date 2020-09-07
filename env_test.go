@@ -19,7 +19,7 @@ type Config struct {
 	Other               bool   `env:"othervar"`
 	Port                int    `env:"PORT"`
 	NotAnEnv            string
-	DatabaseURL         string        `env:"DATABASE_URL" envDefault:"postgres://localhost:5432/db"`
+	DatabaseURL         string        `env:"DATABASE_URL" default:"postgres://localhost:5432/db"`
 	Strings             []string      `env:"STRINGS"`
 	SepStrings          []string      `env:"SEPSTRINGS" envSeparator:":"`
 	Numbers             []int         `env:"NUMBERS"`
@@ -229,7 +229,7 @@ func TestErrorOptionNotRecognized(t *testing.T) {
 func ExampleParse() {
 	type config struct {
 		Home         string `env:"HOME"`
-		Port         int    `env:"PORT" envDefault:"3000"`
+		Port         int    `env:"PORT" default:"3000"`
 		IsProduction bool   `env:"PRODUCTION"`
 	}
 	os.Setenv("HOME", "/tmp/fakehome")
@@ -253,7 +253,7 @@ func TestParseInternalStruct(t *testing.T) {
 func ExampleParseRequiredField() {
 	type config struct {
 		Home         string `env:"HOME"`
-		Port         int    `env:"PORT" envDefault:"3000"`
+		Port         int    `env:"PORT" default:"3000"`
 		IsProduction bool   `env:"PRODUCTION"`
 		SecretKey    string `env:"SECRET_KEY,required"`
 	}
@@ -261,13 +261,13 @@ func ExampleParseRequiredField() {
 	cfg := config{}
 	err := parseENV(&cfg)
 	fmt.Println(err)
-	// Output: Required environment variable SECRET_KEY is not set
+	// Output: required environment variable SECRET_KEY is not set
 }
 
 func ExampleParseMultipleOptions() {
 	type config struct {
 		Home         string `env:"HOME"`
-		Port         int    `env:"PORT" envDefault:"3000"`
+		Port         int    `env:"PORT" default:"3000"`
 		IsProduction bool   `env:"PRODUCTION"`
 		SecretKey    string `env:"SECRET_KEY,required,option1"`
 	}
@@ -275,5 +275,5 @@ func ExampleParseMultipleOptions() {
 	cfg := config{}
 	err := parseENV(&cfg)
 	fmt.Println(err)
-	// Output: Env tag option option1 not supported.
+	// Output: env tag option option1 not supported
 }
