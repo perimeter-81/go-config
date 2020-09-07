@@ -9,22 +9,28 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type InternalStruct struct {
+	InternalField string   `env:"INTERNAL_FIELD"`
+	Strings       []string `env:"STRINGS"`
+}
+
 type Config struct {
-	Some        string `env:"somevar"`
-	Other       bool   `env:"othervar"`
-	Port        int    `env:"PORT"`
-	NotAnEnv    string
-	DatabaseURL string        `env:"DATABASE_URL" envDefault:"postgres://localhost:5432/db"`
-	Strings     []string      `env:"STRINGS"`
-	SepStrings  []string      `env:"SEPSTRINGS" envSeparator:":"`
-	Numbers     []int         `env:"NUMBERS"`
-	Numbers64   []int64       `env:"NUMBERS64"`
-	Bools       []bool        `env:"BOOLS"`
-	Duration    time.Duration `env:"DURATION"`
-	Float32     float32       `env:"FLOAT32"`
-	Float64     float64       `env:"FLOAT64"`
-	Float32s    []float32     `env:"FLOAT32S"`
-	Float64s    []float64     `env:"FLOAT64S"`
+	Some                string `env:"somevar"`
+	Other               bool   `env:"othervar"`
+	Port                int    `env:"PORT"`
+	NotAnEnv            string
+	DatabaseURL         string        `env:"DATABASE_URL" envDefault:"postgres://localhost:5432/db"`
+	Strings             []string      `env:"STRINGS"`
+	SepStrings          []string      `env:"SEPSTRINGS" envSeparator:":"`
+	Numbers             []int         `env:"NUMBERS"`
+	Numbers64           []int64       `env:"NUMBERS64"`
+	Bools               []bool        `env:"BOOLS"`
+	Duration            time.Duration `env:"DURATION"`
+	Float32             float32       `env:"FLOAT32"`
+	Float64             float64       `env:"FLOAT64"`
+	Float32s            []float32     `env:"FLOAT32S"`
+	Float64s            []float64     `env:"FLOAT64S"`
+	InternalStructField InternalStruct
 }
 
 func TestParsesEnv(t *testing.T) {
@@ -216,10 +222,8 @@ func TestErrorOptionNotRecognized(t *testing.T) {
 	type config struct {
 		Var string `env:"VAR,not_supported!"`
 	}
-
 	cfg := &config{}
 	assert.Error(t, parseENV(cfg))
-
 }
 
 func ExampleParse() {
@@ -233,6 +237,17 @@ func ExampleParse() {
 	parseENV(&cfg)
 	fmt.Println(cfg)
 	// Output: {/tmp/fakehome 3000 false}
+}
+
+func TestParseInternalStruct(t *testing.T) {
+	cfg := &Config{}
+	os.Setenv("somevar", "/tmp/fakehome")
+	os.Setenv("INTERNAL_FIELD", "boris_test")
+	os.Setenv("STRINGS", "string1,string2,string3")
+	assert.NoError(t, parseENV(cfg))
+	assert.Equal(t, "boris_test", cfg.InternalStructField.InternalField)
+	assert.Equal(t, "/tmp/fakehome", cfg.Some)
+	assert.Equal(t, []string{"string1", "string2", "string3"}, cfg.InternalStructField.Strings)
 }
 
 func ExampleParseRequiredField() {
