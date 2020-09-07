@@ -53,18 +53,25 @@ func parseENV(v interface{}) error {
 
 func doParse(ref reflect.Value) error {
 	refType := ref.Type()
-	for i := 0; i < refType.NumField(); i++ {
-		value, err := get(refType.Field(i))
-		if err != nil {
-			return err
-		}
+	for i := 0; i < ref.NumField(); i++ {
+		switch ref.Field(i).Kind() {
+		case reflect.Struct:
+			if err := doParse(ref.Field(i)); err != nil {
+				return err
+			}
+		default:
+			value, err := get(refType.Field(i))
+			if err != nil {
+				return err
+			}
 
-		if value == "" {
-			continue
-		}
+			if value == "" {
+				continue
+			}
 
-		if err = set(ref.Field(i), refType.Field(i), value); err != nil {
-			return err
+			if err = set(ref.Field(i), refType.Field(i), value); err != nil {
+				return err
+			}
 		}
 	}
 
