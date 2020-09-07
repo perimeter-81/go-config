@@ -140,13 +140,20 @@ func set(field reflect.Value, refType reflect.StructField, value string) error {
 		}
 
 		field.SetBool(bVal)
-	case reflect.Int:
-		intValue, err := strconv.ParseInt(value, 10, 32)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+		intValue, err := strconv.ParseInt(value, 10, field.Type().Bits())
 		if err != nil {
 			return err
 		}
 
 		field.SetInt(intValue)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		intValue, err := strconv.ParseUint(value, 10, field.Type().Bits())
+		if err != nil {
+			return err
+		}
+
+		field.SetUint(intValue)
 	case reflect.Float32:
 		v, err := strconv.ParseFloat(value, 32)
 		if err != nil {
@@ -170,7 +177,7 @@ func set(field reflect.Value, refType reflect.StructField, value string) error {
 
 			field.Set(reflect.ValueOf(dValue))
 		} else {
-			intValue, err := strconv.ParseInt(value, 10, 64)
+			intValue, err := strconv.ParseInt(value, 10, field.Type().Bits())
 			if err != nil {
 				return err
 			}
