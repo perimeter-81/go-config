@@ -14,22 +14,22 @@ type internalStruct struct {
 }
 
 type testConfig struct {
-	Some                string         `yaml:"somevar" env:"somevar" default:"koko"`
-	Other               bool           `yaml:"othervar" env:"othervar" default:"true"`
-	Port                int            `yaml:"port" env:"PORT"  default:"-1"`
-	NotAnEnv            string         `yaml:"notAnEnv" env:"" default:"popo"`
-	DatabaseURL         string         `yaml:"database" env:"DATABASE_URL" default:"postgres://localhost:5432/db"`
+	InternalStructField internalStruct `yaml:"internal"`
 	Strings             []string       `yaml:"strongs" env:"STRINGS"`
 	SepStrings          []string       `yaml:"strings" env:"SEPSTRINGS" envSeparator:":"`
 	Numbers             []int          `yaml:"numbers" env:"NUMBERS"`
 	Numbers64           []int64        `yaml:"numbers64" env:"NUMBERS64"`
 	Bools               []bool         `yaml:"bools" env:"BOOLS"`
-	Duration            time.Duration  `yaml:"duration" env:"DURATION" default:"5s"`
-	Float32             float32        `yaml:"float32" env:"FLOAT32"`
-	Float64             float64        `yaml:"float64" env:"FLOAT64"`
 	Float32s            []float32      `yaml:"float32s" env:"FLOAT32S"`
 	Float64s            []float64      `yaml:"float64s" env:"FLOAT64S"`
-	InternalStructField internalStruct `yaml:"internal"`
+	Some                string         `yaml:"somevar" env:"somevar" default:"koko"`
+	NotAnEnv            string         `yaml:"notAnEnv" env:"" default:"popo"`
+	DatabaseURL         string         `yaml:"database" env:"DATABASE_URL" default:"postgres://localhost:5432/db"`
+	Port                int            `yaml:"port" env:"PORT"  default:"-1"`
+	Duration            time.Duration  `yaml:"duration" env:"DURATION" default:"5s"`
+	Float64             float64        `yaml:"float64" env:"FLOAT64"`
+	Float32             float32        `yaml:"float32" env:"FLOAT32"`
+	Other               bool           `yaml:"othervar" env:"othervar" default:"true"`
 }
 
 func TestMixedConfig(t *testing.T) {
