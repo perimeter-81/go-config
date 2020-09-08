@@ -37,7 +37,7 @@ var (
 
 // parse parses a struct containing `env` tags and loads its values from
 // environment variables.
-func parseENV(v interface{}) error {
+func parseENV(v interface{}, useDefault bool) error {
 	ptrRef := reflect.ValueOf(v)
 	if ptrRef.Kind() != reflect.Ptr {
 		return ErrNotAStructPtr
@@ -48,19 +48,19 @@ func parseENV(v interface{}) error {
 		return ErrNotAStructPtr
 	}
 
-	return doParse(ref)
+	return doParse(ref, useDefault)
 }
 
-func doParse(ref reflect.Value) error {
+func doParse(ref reflect.Value, useDefault bool) error {
 	refType := ref.Type()
 	for i := 0; i < ref.NumField(); i++ {
 		switch ref.Field(i).Kind() {
 		case reflect.Struct:
-			if err := doParse(ref.Field(i)); err != nil {
+			if err := doParse(ref.Field(i), useDefault); err != nil {
 				return err
 			}
 		default:
-			value, err := get(refType.Field(i))
+			value, err := get(refType.Field(i), useDefault)
 			if err != nil {
 				return err
 			}
@@ -78,22 +78,28 @@ func doParse(ref reflect.Value) error {
 	return nil
 }
 
-func get(field reflect.StructField) (val string, err error) {
+func get(field reflect.StructField, useDefault bool) (string, error) {
 	key, opts := parseKeyForOption(field.Tag.Get(fieldTag))
-
 	defaultValue := field.Tag.Get(fieldDefaultTag)
-	val = getOr(key, defaultValue)
 
+	var (
+		val string
+		err error
+	)
 	if len(opts) > 0 {
 		for _, opt := range opts {
 			// The only option supported is "required".
 			switch opt {
 			case "":
-				break
+				if !useDefault {
+					val = getEnvVer(key)
+				} else {
+					val = getOr(key, defaultValue)
+				}
 			case "required":
 				val, err = getRequired(key)
 			default:
-				err = fmt.Errorf("env tag option %s not supported", opt)
+				err = fmt.Errorf("tag option %q not supported", opt)
 			}
 		}
 	}
@@ -117,12 +123,15 @@ func getRequired(key string) (string, error) {
 }
 
 func getOr(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value != "" {
+	if value := getEnvVer(key); value != "" {
 		return value
 	}
 
 	return defaultValue
+}
+
+func getEnvVer(key string) string {
+	return os.Getenv(key)
 }
 
 func set(field reflect.Value, refType reflect.StructField, value string) error {

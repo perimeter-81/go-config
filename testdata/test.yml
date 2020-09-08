@@ -1,0 +1,25 @@
+somevar: "a"
+othervar: true
+port: 666
+notAnEnv: "yml"
+database: "http://cool_db"
+strongs:
+  - "a"
+  - "b"
+numbers:
+  - 1
+  - 2
+
+numbers64:
+  - 1
+  - 2
+
+bools:
+  - true
+  - true
+
+internal:
+  internal_field: "cupcake"
+  strings:
+    - "a"
+    - "b"
